@@ -14,7 +14,7 @@
 
 void eval(char *cmdline);
 int builtin_command(char **argv);
-int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int numArg[], int *count);
+int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int numArg[], int *count, int *mode);
 
 char **environ;
 
@@ -38,11 +38,12 @@ void eval(char *cmdline) {
 	char str[MAXPROGRAM][MAXARGS][LENGTH];
 	int numArg[MAXPROGRAM] = {0};
 	int bg;
+	int mode = 0;
 	int i, j, k, count = 0;
 	pid_t pid;
 
 	strcpy(buf, cmdline);
-	bg = parseline(buf, argv, str, numArg, &count);
+	bg = parseline(buf, argv, str, numArg, &count, &mode);
 
 	// ignore empty lines
 	if(argv[0] == NULL)
@@ -91,7 +92,7 @@ int builtin_command(char **argv) {
 }
 
 
-int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int numArg[], int *count) {
+int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int numArg[], int *count, int *mode) {
 	char *result = NULL;
 	char *left = NULL;
 	char temp[100];
@@ -109,20 +110,6 @@ int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int
 
 	if(argc == 0)
 		return 1;
-/*
-	for(k = 0; k < argc; k++) {
-		if(strcmp(argv[k], "&") == 0) {
-			i++;
-			j = 0;
-			(*count)++;
-			continue;
-		}
-		else {
-			strcpy(str[i][j++], argv[k]);
-			numArg[i]++;
-		}
-	}
-*/
 
 	if(strcmp(argv[argc-1], "&") == 0) {
 		bg = 1;
@@ -142,22 +129,34 @@ int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int
 	else {
 		bg = 0;
 		(*count)++;
-		numArg[i] = argc;
-		for(k = 0; k < argc; k++)
-			strcpy(str[0][k++], argv[k]);
-/*		for(k = 0; k < argc; k++) {
-			if(strcmp(argv[k], "&") == 0) {
-				i++;
-				j = 0;
-				(*count)++;
-				continue;
+		for(k = 0; k < argc; k++) {
+			if(strcmp(argv[k], ";") == 0) {
+				*mode = 1;
+				break;
 			}
-			else {
-				strcpy(str[i][j++], argv[k]);
-				numArg[i]++;
+			else if(strcmp(argv[k], "&") == 0)
+				break;
+		}
+
+		if(*mode == 1) {
+			for(k = 0; k < argc; k++) {
+				if(strcmp(argv[k], ";") == 0) {
+					i++;
+					j = 0;
+					(*count)++;
+					continue;
+				}
+				else {
+					strcpy(str[i][j++], argv[k]);
+					numArg[i]++;
+				}
 			}
 		}
-*/
+		else if(*mode == 0) {
+			numArg[i] = argc;
+			for(k = 0; k < argc; k++)
+				strcpy(str[0][k++], argv[k]);
+		}
 	}
 
 	return bg;
