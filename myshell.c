@@ -60,6 +60,7 @@ void eval(char *cmdline) {
 			for(j = 0; j < numArg[i]; j++)
 				argv[j] = str[i][k++];
 
+			if(mode == 0 || mode == 1) {
 			if((pid = fork()) == 0) {
 				if(execve(argv[0], argv, environ) < 0) {
 					fprintf(stderr, "%s\n", strerror(errno));
@@ -67,9 +68,20 @@ void eval(char *cmdline) {
 					exit(0);
 				}
 			}
+			if(mode == 1) {
+				int status;
+				waitpid(pid, &status, 0);
+
+			}
+			}
+
+			else if (mode == 2)
+				printf("%s", str[i]);
+				while(system(str[i]) == -1);
+				
 		}
 
-		if(!bg) { // foreground
+		if(!bg && !mode) { // foreground
 			int status;
 			if(waitpid(pid, &status, 0) < 0)
 				fprintf(stderr, "%s\n", strerror(errno));
@@ -134,6 +146,10 @@ int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int
 				*mode = 1;
 				break;
 			}
+			else if(strcmp(argv[k], "&&") == 0) {
+				*mode = 2;
+				break;
+			}
 			else if(strcmp(argv[k], "&") == 0)
 				break;
 		}
@@ -152,6 +168,22 @@ int parseline(char *buf, char **argv, char str[MAXPROGRAM][MAXARGS][LENGTH], int
 				}
 			}
 		}
+		
+		else if(*mode == 2) {
+			for(k = 0; k < argc; k++) {
+				if(strcmp(argv[k], "&&") == 0) {
+					i++;
+					j = 0;
+					(*count)++;
+					continue;
+				}
+				else {
+					strcpy(str[i][j++], argv[k]);
+					numArg[i]++;
+				}
+			}
+		}
+
 		else if(*mode == 0) {
 			numArg[i] = argc;
 			for(k = 0; k < argc; k++)
